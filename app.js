@@ -13,9 +13,13 @@ var friendsRouter = require('./routes/friends');
 var settlementsRouter = require('./routes/settlements');
 var activityRouter = require('./routes/activity');
 var cors = require('cors');
+var helmet = require('helmet');
+var compression = require('compression');
 
 var app = express();
 app.use(cors());
+app.use(helmet());
+app.use(compression());
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
