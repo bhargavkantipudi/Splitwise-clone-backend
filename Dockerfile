@@ -1,8 +1,9 @@
-FROM node:lts-buster-slim as development
-
+FROM node:22-slim as development
 ENV NODE_ENV development
 
 WORKDIR /SplitWise-clone-backend
+
+RUN apt-get update -y && apt-get install -y openssl
 
 COPY . .
 

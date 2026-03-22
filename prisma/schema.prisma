@@ -1,13 +1,108 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-arm64-openssl-3.0.x", "linux-arm64-openssl-1.1.x"]
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int            @id @default(autoincrement())
+  name         String
+  email        String         @unique
+  passwordHash String
+  createdAt    DateTime       @default(now())
+  
+  groups           GroupMember[]
+  expensesPaid     Expense[]        @relation("Payer")
+  splitsOwed       ExpenseSplit[]
+  friendsInitiated Friendship[]     @relation("FriendInitiator")
+  friendsReceived  Friendship[]     @relation("FriendReceiver")
+  settlementsPaid  Settlement[]     @relation("SettlementPayer")
+  settlementsRecv  Settlement[]     @relation("SettlementPayee")
+  activities       Activity[]
+}
+
+model Friendship {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  friendId  Int
+  createdAt DateTime @default(now())
+
+  user   User @relation("FriendInitiator", fields: [userId], references: [id])
+  friend User @relation("FriendReceiver", fields: [friendId], references: [id])
+
+  @@unique([userId, friendId])
+}
+
+model Group {
+  id        Int           @id @default(autoincrement())
+  name      String
+  createdAt DateTime      @default(now())
+  
+  members   GroupMember[]
+  expenses  Expense[]
+}
+
+model GroupMember {
+  id       Int      @id @default(autoincrement())
+  userId   Int
+  groupId  Int
+  joinedAt DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  group    Group    @relation(fields: [groupId], references: [id])
+
+  @@unique([userId, groupId])
+}
+
+model Expense {
+  id          Int      @id @default(autoincrement())
+  groupId     Int?
+  payerId     Int
+  amount      Float
+  description String
+  category    String   @default("general") // "food", "travel", "rent", etc.
+  notes       String?
+  date        DateTime @default(now())
+
+  group       Group?   @relation(fields: [groupId], references: [id])
+  payer       User     @relation("Payer", fields: [payerId], references: [id])
+  
+  splits      ExpenseSplit[]
+}
+
+model ExpenseSplit {
+  id         Int     @id @default(autoincrement())
+  expenseId  Int
+  userId     Int
+  amountOwed Float
+
+  expense    Expense @relation(fields: [expenseId], references: [id])
+  user       User    @relation(fields: [userId], references: [id])
+}
+
+model Settlement {
+  id        Int      @id @default(autoincrement())
+  payerId   Int
+  payeeId   Int
+  amount    Float
+  groupId   Int?
+  createdAt DateTime @default(now())
+
+  payer  User @relation("SettlementPayer", fields: [payerId], references: [id])
+  payee  User @relation("SettlementPayee", fields: [payeeId], references: [id])
+}
+
+model Activity {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  type      String   // "expense_added", "settlement", "group_created", "friend_added"
+  message   String
+  groupId   Int?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
 }
